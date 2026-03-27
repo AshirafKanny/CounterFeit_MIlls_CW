@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Counterfeit Note Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">AI Vision Lab</p>
+      <h1>Counterfeit Note Detector</h1>
+      <p class="subtitle">Use your webcam for real-time counterfeit detection. Hold a note in front of the camera and view live results.</p>
+    </header>
+
+    <section class="panel">
+      <div class="left">
+        <div class="camera-controls">
+          <button id="startCameraButton" class="scan-button">Start Camera</button>
+          <button id="startLiveButton" class="scan-button" disabled>Start Live Detection</button>
+          <button id="stopLiveButton" class="scan-button muted" disabled>Stop Live Detection</button>
+        </div>
+
+        <label class="interval-control" for="cameraSelect">
+          Camera source
+          <div class="camera-row">
+            <select id="cameraSelect"></select>
+            <button id="refreshCameraButton" class="small-button" type="button">Refresh</button>
+          </div>
+        </label>
+
+        <label class="interval-control" for="intervalSelect">
+          Detection speed
+          <select id="intervalSelect">
+            <option value="1200">Slow (1.2s)</option>
+            <option value="800" selected>Balanced (0.8s)</option>
+            <option value="450">Fast (0.45s)</option>
+          </select>
+        </label>
+
+        <label class="interval-control" for="amountInput">
+          Teach amount (example: 2000)
+          <div class="camera-row">
+            <input id="amountInput" type="text" placeholder="2000" />
+            <button id="saveTemplateButton" class="small-button" type="button">Save Template</button>
+          </div>
+        </label>
+
+        <p id="status" class="status">Camera is off. Click Start Camera.</p>
+      </div>
+
+      <div class="right">
+        <div class="preview-wrap">
+          <video id="cameraFeed" autoplay muted playsinline hidden></video>
+          <canvas id="captureCanvas" hidden></canvas>
+          <p id="previewPlaceholder">Camera feed will appear here after you click Start Camera.</p>
+        </div>
+
+        <div id="resultCard" class="result-card" hidden>
+          <div class="result-header">
+            <p>Result</p>
+            <span id="resultBadge" class="badge">Pending</span>
+          </div>
+
+          <p id="resultLabel" class="result-label"></p>
+          <p id="stateText" class="result-line"></p>
+          <p id="amountText" class="result-line"></p>
+          <p id="recommendationText" class="result-line"></p>
+          <p id="finalVerdictText" class="final-verdict">Final verdict: collecting frames...</p>
+
+          <div class="meter">
+            <div id="meterFill" class="meter-fill"></div>
+          </div>
+          <p id="confidenceText" class="confidence-text"></p>
+
+          <details class="details">
+            <summary>Technical feature details</summary>
+            <pre id="featureDump"></pre>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
