@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import cv2
 import joblib
@@ -42,16 +43,31 @@ def load_labeled_vectors(data_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     return np.array(vectors, dtype=np.float32), np.array(labels, dtype=np.int32)
 
 
-def main() -> None:
-    project_root = Path(__file__).resolve().parents[2]
-    data_dir = project_root / "data"
-    artifacts_dir = project_root / "artifacts"
+def dataset_counts(data_dir: Path) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for class_name in ["genuine", "counterfeit"]:
+        class_dir = data_dir / class_name
+        if not class_dir.exists():
+            counts[class_name] = 0
+            continue
+
+        images = [
+            p for p in class_dir.glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+        ]
+        counts[class_name] = len(images)
+    return counts
+
+
+def train_counterfeit_model(data_dir: Path, artifacts_dir: Path) -> dict[str, Any]:
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
     x, y = load_labeled_vectors(data_dir)
 
     if len(np.unique(y)) < 2:
         raise ValueError("Need both classes. Add images to both data/genuine and data/counterfeit.")
+
+    if len(y) < 10:
+        raise ValueError("Need at least 10 total samples before training.")
 
     x_train, x_test, y_train, y_test = train_test_split(
         x,
@@ -61,16 +77,39 @@ def main() -> None:
         stratify=y,
     )
 
-    model = RandomForestClassifier(n_estimators=200, random_state=42)
+    model = RandomForestClassifier(n_estimators=400, random_state=42, class_weight="balanced")
     model.fit(x_train, y_train)
 
     predictions = model.predict(x_test)
-    print("Validation Report:")
-    print(classification_report(y_test, predictions, target_names=["counterfeit", "genuine"]))
+    report = classification_report(
+        y_test,
+        predictions,
+        target_names=["counterfeit", "genuine"],
+        output_dict=True,
+    )
+    report_text = classification_report(y_test, predictions, target_names=["counterfeit", "genuine"])
 
     output_file = artifacts_dir / "counterfeit_detector.joblib"
     joblib.dump(model, output_file)
-    print(f"Saved model to: {output_file}")
+    return {
+        "model_path": str(output_file),
+        "report": report,
+        "report_text": report_text,
+        "samples": dataset_counts(data_dir),
+        "train_size": int(len(x_train)),
+        "test_size": int(len(x_test)),
+    }
+
+
+def main() -> None:
+    project_root = Path(__file__).resolve().parents[2]
+    data_dir = project_root / "data"
+    artifacts_dir = project_root / "artifacts"
+
+    metrics = train_counterfeit_model(data_dir, artifacts_dir)
+    print("Validation Report:")
+    print(metrics["report_text"])
+    print(f"Saved model to: {metrics['model_path']}")
 
 
 if __name__ == "__main__":

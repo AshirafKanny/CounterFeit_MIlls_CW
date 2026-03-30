@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+from datetime import datetime
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -10,6 +11,7 @@ from app.schemas import PredictionResponse
 from app.services.denomination import denomination_estimator
 from app.services.features import decode_image_bytes
 from app.services.inference import detector
+from training.train_baseline_model import dataset_counts, train_counterfeit_model
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
@@ -32,6 +34,13 @@ def health() -> dict[str, str]:
 def _sanitize_amount_label(amount: str) -> str:
     cleaned = re.sub(r"[^0-9A-Za-z_-]", "", amount.strip())
     return cleaned[:30]
+
+
+def _sanitize_authenticity_label(label: str) -> str:
+    cleaned = label.strip().lower()
+    if cleaned not in {"genuine", "counterfeit"}:
+        raise HTTPException(status_code=400, detail="Label must be genuine or counterfeit.")
+    return cleaned
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -108,4 +117,62 @@ def list_denomination_templates() -> dict[str, object]:
     return {
         "status": "ok",
         "templates": stats,
+    }
+
+
+@app.post("/authenticity/sample")
+async def add_authenticity_sample(
+    label: str = Form(...),
+    file: UploadFile = File(...),
+) -> dict[str, str]:
+    content_type = (file.content_type or "").lower()
+    if content_type not in {"image/jpeg", "image/jpg", "image/png"}:
+        raise HTTPException(status_code=400, detail="Upload JPG or PNG image only.")
+
+    class_label = _sanitize_authenticity_label(label)
+
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    image = decode_image_bytes(file_bytes)
+
+    class_dir = project_root / "data" / class_label
+    class_dir.mkdir(parents=True, exist_ok=True)
+    filename = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f") + ".jpg"
+    output_file = class_dir / filename
+
+    import cv2
+
+    cv2.imwrite(str(output_file), image)
+    return {
+        "status": "ok",
+        "label": class_label,
+        "saved": str(output_file),
+    }
+
+
+@app.get("/authenticity/dataset")
+def get_authenticity_dataset_stats() -> dict[str, object]:
+    counts = dataset_counts(project_root / "data")
+    return {"status": "ok", "samples": counts}
+
+
+@app.post("/authenticity/train")
+def train_authenticity_model() -> dict[str, object]:
+    try:
+        metrics = train_counterfeit_model(project_root / "data", project_root / "artifacts")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    loaded = detector.reload_model()
+
+    return {
+        "status": "ok",
+        "model_reloaded": loaded,
+        "samples": metrics["samples"],
+        "train_size": metrics["train_size"],
+        "test_size": metrics["test_size"],
+        "report_text": metrics["report_text"],
+        "model_path": metrics["model_path"],
     }

@@ -137,6 +137,16 @@ h1 {
   cursor: pointer;
 }
 
+.small-button.train {
+  margin-top: 6px;
+  background: #0d7a6f;
+}
+
+.status.small {
+  margin-top: 6px;
+  font-size: 0.82rem;
+}
+
 .status {
   min-height: 22px;
   margin-top: 10px;

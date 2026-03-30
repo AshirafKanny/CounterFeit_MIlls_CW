@@ -41,6 +41,13 @@ class TrainedModelDetector:
         if self.artifact_path.exists():
             self.model = joblib.load(self.artifact_path)
 
+    def reload_model(self) -> bool:
+        if not self.artifact_path.exists():
+            self.model = None
+            return False
+        self.model = joblib.load(self.artifact_path)
+        return True
+
     def predict(self, image) -> tuple[str, float, dict[str, float]]:
         features = extract_simple_features(image)
 

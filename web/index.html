@@ -50,6 +50,19 @@
           </div>
         </label>
 
+        <label class="interval-control" for="authLabelSelect">
+          Teach fake detector
+          <div class="camera-row">
+            <select id="authLabelSelect">
+              <option value="genuine">Genuine sample</option>
+              <option value="counterfeit">Counterfeit sample</option>
+            </select>
+            <button id="saveAuthSampleButton" class="small-button" type="button">Save Sample</button>
+          </div>
+          <button id="trainAuthButton" class="small-button train" type="button">Train Fake Detector</button>
+          <p id="datasetStats" class="status small">Samples - genuine: 0, counterfeit: 0</p>
+        </label>
+
         <p id="status" class="status">Camera is off. Click Start Camera.</p>
       </div>
 
