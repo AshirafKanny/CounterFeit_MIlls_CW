@@ -24,8 +24,13 @@ const featureDump = document.getElementById("featureDump");
 let mediaStream = null;
 let liveTimer = null;
 let predictionInFlight = false;
-let selectedCameraId = "";
+let selectedCameraId = localStorage.getItem("preferredCameraId") || "";
 let verdictHistory = [];
+
+function isLikelyExternalCamera(label) {
+  const text = (label || "").toLowerCase();
+  return text.includes("usb") || text.includes("logitech") || text.includes("external");
+}
 
 function setStatus(text) {
   statusText.textContent = text;
@@ -127,8 +132,10 @@ async function listCameras() {
     }
 
     if (!cameraSelect.value && videoInputs.length > 0) {
-      cameraSelect.value = videoInputs[0].deviceId;
+      const preferredExternal = videoInputs.find((d) => isLikelyExternalCamera(d.label));
+      cameraSelect.value = (preferredExternal || videoInputs[0]).deviceId;
       selectedCameraId = cameraSelect.value;
+      localStorage.setItem("preferredCameraId", selectedCameraId);
     }
   } catch (error) {
     setStatus(`Camera list error: ${error.message}`);
@@ -163,6 +170,7 @@ async function startCamera() {
     if (settings.deviceId) {
       selectedCameraId = settings.deviceId;
       cameraSelect.value = settings.deviceId;
+      localStorage.setItem("preferredCameraId", selectedCameraId);
     }
   } catch (error) {
     setStatus(`Camera error: ${error.message}`);
@@ -327,6 +335,7 @@ startCameraButton.addEventListener("click", async () => {
 
 cameraSelect.addEventListener("change", async () => {
   selectedCameraId = cameraSelect.value;
+  localStorage.setItem("preferredCameraId", selectedCameraId);
   if (mediaStream) {
     stopCamera();
     startCameraButton.textContent = "Start Camera";
